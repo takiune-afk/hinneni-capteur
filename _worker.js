@@ -43,6 +43,11 @@ function json(body, status = 200) {
   });
 }
 function clean(v) { return String(v == null ? "" : v).slice(0, 2000); }
+function getCookie(request, name) {
+  const c = request.headers.get("cookie") || "";
+  const m = c.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : "";
+}
 function newId() { return Date.now() + "-" + Math.random().toString(36).slice(2, 7); }
 
 async function listByPrefix(kv, prefix) {
@@ -87,7 +92,8 @@ async function handleApi(request, env) {
   // --- Authentification par RÔLE ---
   // Admin (env CAPTEUR_CODE) = voit tout. Sinon, le code d'une église = ne voit QUE cette église.
   if (!env.CAPTEUR_CODE) return json({ error: "server_not_configured" }, 500);
-  const given = request.headers.get("x-capteur-code") || "";
+  // Le code arrive par en-tête (fetch de l'app) OU par cookie (ouverture directe d'un PDF dans le cadre).
+  const given = request.headers.get("x-capteur-code") || getCookie(request, "capteur_code") || "";
   const churches = (await kv.get("churches", "json")) || []; // [{name, code}]
   const isAdmin = given === env.CAPTEUR_CODE;
   let myEglise = "";
@@ -124,7 +130,8 @@ async function handleApi(request, env) {
     const res = await env.ASSETS.fetch(new Request(assetUrl.toString()));
     if (!res.ok) return json({ error: "not_found" }, 404);
     const h = new Headers(res.headers);
-    h.set("content-disposition", 'inline; filename="' + f + '"');
+    const dl = url.searchParams.get("dl") === "1";
+    h.set("content-disposition", (dl ? "attachment" : "inline") + '; filename="' + f + '"');
     for (const [k, v] of Object.entries(CORS)) h.set(k, v);
     return new Response(res.body, { status: res.status, headers: h });
   }
