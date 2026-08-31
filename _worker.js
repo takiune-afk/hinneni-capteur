@@ -11,6 +11,7 @@ const INSCR_FIELDS = ["prenom", "nom", "eglise", "telephone", "email", "remarque
 // Documents servis dans l'onglet « Ressources », gardés par le code.
 // Fichiers déposés dans public/docs/. Accès direct à /docs/* bloqué : tout passe par /api/doc.
 const DOCS_RESP = [
+  "25_Manuel_de_l_animatrice.pdf",
   "13_Guide_du_suivi_local.pdf", "14_Les_quatre_cercles.pdf", "24_Le_suivi_a_deux.pdf",
   "15_Fiche_de_remontee.pdf", "18_Tu_arrives_en_cours_de_route.pdf", "17_Activites_pratiques.pdf",
   "16_Auto_evaluation_Ou_j_en_suis.pdf", "23_Amener_une_amie.pdf", "21_La_carte_de_la_responsable.pdf",
