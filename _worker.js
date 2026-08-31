@@ -107,13 +107,17 @@ async function handleApi(request, env) {
 
   if (method === "GET" && path.endsWith("/state")) {
     const entries = mine(await listByPrefix(kv, "entry:"));
-    return json({
+    const r = json({
       role: isAdmin ? "admin" : "church",
       eglise: myEglise,
       eglises: churchNames,
       churches: isAdmin ? churches : [], // codes visibles seulement pour l'admin
       entries,
     });
+    // Le serveur pose lui-même le cookie du code : ainsi l'ouverture d'un PDF dans un
+    // nouvel onglet (qui n'envoie pas d'en-tête) est authentifiée sans dépendre du navigateur.
+    r.headers.append("set-cookie", "capteur_code=" + encodeURIComponent(given) + "; Path=/; Max-Age=43200; SameSite=Lax; HttpOnly");
+    return r;
   }
   if (method === "GET" && path.endsWith("/inscriptions")) {
     const inscriptions = mine(await listByPrefix(kv, "inscr:"));
