@@ -124,7 +124,7 @@ async function handleApi(request, env) {
     const res = await env.ASSETS.fetch(new Request(assetUrl.toString()));
     if (!res.ok) return json({ error: "not_found" }, 404);
     const h = new Headers(res.headers);
-    h.set("content-disposition", 'attachment; filename="' + f + '"');
+    h.set("content-disposition", 'inline; filename="' + f + '"');
     for (const [k, v] of Object.entries(CORS)) h.set(k, v);
     return new Response(res.body, { status: res.status, headers: h });
   }
