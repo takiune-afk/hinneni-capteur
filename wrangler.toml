@@ -1,0 +1,15 @@
+name = "hinneni-capteur"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "public"
+
+# Le stockage KV. Crée d'abord le namespace :
+#   npx wrangler kv namespace create CAPTEUR_KV
+# puis colle l'id renvoyé ci-dessous (ou fais le binding dans le dashboard).
+[[kv_namespaces]]
+binding = "CAPTEUR_KV"
+id = "REMPLACE_PAR_TON_ID_KV"
+
+# Les secrets (CAPTEUR_CODE, INGEST_TOKEN) ne se mettent PAS ici.
+# Dashboard → Pages → ton projet → Settings → Environment variables (chiffrées),
+# ou :  npx wrangler pages secret put CAPTEUR_CODE
+#        npx wrangler pages secret put INGEST_TOKEN
