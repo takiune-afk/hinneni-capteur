@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le capteur du suivi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+:root{
+  --creme:#F4E9DA; --panel:#FBF6EC; --panel2:#EFE4D3; --ink:#3D2817;
+  --rose:#8B4A52; --terra:#B8553C; --or:#9C7430; --vert:#5F7355; --brun:#7B5E48;
+  --rule:#E1D2BE; --circ:#B7A793; --pOr:#F4EEDD; --pVert:#E9EEE7;
+  --good:#5F7355; --warn:#9C7430; --crit:#B8553C;
+  --display:'Cormorant Garamond','EB Garamond',Garamond,Georgia,serif;
+  --body:'EB Garamond',Garamond,Georgia,'Times New Roman',serif;
+  --shadow:0 20px 46px -28px rgba(61,40,23,.5);
+  --shadow-sm:0 8px 20px -14px rgba(61,40,23,.42);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{transition:none!important}}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  background:
+    radial-gradient(1100px 520px at 88% -10%, rgba(184,85,60,.11), transparent 60%),
+    radial-gradient(900px 460px at -6% 2%, rgba(139,74,82,.10), transparent 55%),
+    linear-gradient(180deg,#F8EFE0 0%, var(--creme) 45%, #F1E4D0 100%);
+  background-attachment:fixed;}
+.wrap{max-width:1020px;margin:0 auto;padding:30px 26px 84px;}
+.eyebrow{text-transform:uppercase;letter-spacing:.26em;font-size:12px;color:var(--or);font-weight:700;}
+.mast{position:relative;overflow:hidden;border:1px solid var(--rule);border-radius:20px;
+  background:linear-gradient(135deg,#FCF7ED 0%, #F6ECD9 58%, #F0E2CC 100%);
+  box-shadow:var(--shadow);padding:30px 34px 26px;margin-bottom:4px;}
+.mast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;
+  background:linear-gradient(180deg,var(--rose),var(--terra),var(--or));}
+.mast .he{font-family:var(--display);color:rgba(156,116,48,.5);font-size:clamp(40px,7vw,66px);
+  line-height:1;float:right;margin:-4px 0 0;letter-spacing:.02em;}
+.mast h1{font-family:var(--display);font-weight:600;font-size:clamp(36px,6vw,54px);color:var(--rose);
+  line-height:1.02;margin:.12em 0 .04em;}
+.mast .sub{font-family:var(--display);font-style:italic;font-size:clamp(18px,3vw,23px);color:var(--terra);}
+.tabs{display:inline-flex;gap:4px;padding:5px;border:1px solid var(--rule);border-radius:999px;
+  margin:26px 0 14px;flex-wrap:wrap;background:rgba(251,246,236,.82);box-shadow:var(--shadow-sm);}
+.tab{cursor:pointer;padding:9px 21px;font-family:var(--body);font-size:15px;color:var(--brun);
+  background:none;border:none;border-radius:999px;transition:background .2s,color .2s,box-shadow .2s;}
+.tab:hover{color:var(--rose);background:rgba(139,74,82,.08);}
+.tab[aria-selected="true"]{background:linear-gradient(135deg,var(--rose),#7d414a);color:#F7EEDF;font-weight:600;box-shadow:0 9px 18px -10px rgba(139,74,82,.75);}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--terra);outline-offset:2px;}
+h2{font-family:var(--display);font-size:clamp(25px,3.4vw,33px);color:var(--rose);font-weight:600;margin:34px 0 8px;position:relative;padding-left:16px;}
+h2::before{content:"";position:absolute;left:0;top:.2em;bottom:.2em;width:4px;border-radius:4px;background:linear-gradient(180deg,var(--or),var(--terra));}
+h2:first-of-type{margin-top:16px;}
+.lead{color:var(--brun);font-size:17px;max-width:64ch;margin:0 0 18px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:18px;margin-top:16px;}
+.card{position:relative;overflow:hidden;background:linear-gradient(160deg,#FEFAF3 0%, var(--panel) 55%, #F6ECDB 100%);
+  border:1px solid var(--rule);border-radius:16px;padding:22px 22px 18px;box-shadow:var(--shadow-sm);
+  transition:transform .22s,box-shadow .22s;}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--acc,var(--rose));}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow);}
+.card .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--brun);font-weight:700;}
+.card .v{font-family:var(--display);font-size:clamp(40px,6vw,48px);font-weight:600;color:var(--terra);line-height:1;margin-top:6px;font-variant-numeric:tabular-nums;}
+.card .n{font-size:13px;color:var(--brun);margin-top:6px;}
+.card.c1{--acc:var(--rose);}.card.c2{--acc:var(--or);}.card.c3{--acc:var(--vert);}.card.c4{--acc:var(--terra);}
+.card.c1 .v{color:var(--rose);}.card.c2 .v{color:var(--or);}.card.c3 .v{color:var(--vert);}.card.c4 .v{color:var(--terra);}
+.det{color:var(--brun);}.trend{font-weight:600;}
+.pill{display:inline-block;min-width:26px;text-align:center;padding:3px 11px;border-radius:999px;font-size:14px;font-weight:700;color:var(--creme);font-variant-numeric:tabular-nums;}
+.pill.g{background:var(--good);}.pill.w{background:var(--warn);}.pill.c{background:var(--crit);}.pill.n0{background:var(--circ);}
+.flag{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--brun);margin-top:8px;}
+.flag .dot{width:11px;height:11px;border-radius:999px;flex:0 0 auto;}
+.flag .dot.g{background:var(--good);}.flag .dot.w{background:var(--warn);}.flag .dot.n0{background:var(--circ);}
+.ghealth{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:14px;margin-top:14px;}
+.grp{position:relative;background:linear-gradient(160deg,#FEFAF3,var(--panel));border:1px solid var(--rule);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-sm);}
+.grp::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:14px 0 0 14px;background:var(--gc,var(--circ));}
+.grp.g::before{background:var(--good);}.grp.w::before{background:var(--warn);}.grp.n0::before{background:var(--circ);}
+.grp .gn{font-family:var(--display);font-size:20px;color:var(--rose);font-weight:600;line-height:1.1;}
+.grp .gc{font-variant-numeric:tabular-nums;font-weight:700;color:var(--terra);}
+.grp .gv{font-size:13px;color:var(--brun);margin-top:4px;}
+.legend{font-size:13px;color:var(--brun);margin:10px 0 0;display:flex;gap:18px;flex-wrap:wrap;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.legend i{width:10px;height:10px;border-radius:999px;display:inline-block;}
+.reslist{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px;margin-top:14px;}
+.rescard{display:flex;gap:14px;align-items:flex-start;text-align:left;cursor:pointer;width:100%;
+  background:linear-gradient(160deg,#FEFAF3,var(--panel));border:1px solid var(--rule);border-radius:14px;
+  padding:16px 18px;box-shadow:var(--shadow-sm);transition:transform .18s,box-shadow .2s,border-color .18s;font-family:var(--body);}
+.rescard:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--terra);}
+.rescard:disabled{opacity:.6;cursor:default;transform:none;}
+.rescard .ricon{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#F7EEDF;background:linear-gradient(135deg,var(--rose),#7d414a);box-shadow:0 8px 16px -10px rgba(139,74,82,.8);}
+.rescard .rtxt{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.rescard .rt{font-family:var(--display);font-size:19px;font-weight:600;color:var(--rose);line-height:1.15;}
+.rescard .rd{font-size:13.5px;color:var(--brun);line-height:1.4;}
+.duobox{margin-top:22px;border:1px solid #E7CFD0;border-radius:16px;background:linear-gradient(160deg,#FBF1EF,#F6E7E4);padding:20px 22px 22px;position:relative;overflow:hidden;}
+.duobox::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--rose),var(--terra));}
+.duobox .duohead{margin-bottom:6px;}
+.duobox .duotag{display:inline-block;text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700;color:#F7EEDF;background:var(--rose);padding:3px 11px;border-radius:999px;}
+.duobox .duohead h3{font-family:var(--display);font-size:24px;color:var(--rose);font-weight:600;margin:.3em 0 .12em;}
+.duobox .duohead p{margin:0 0 4px;font-size:14.5px;color:var(--brun);line-height:1.5;max-width:70ch;}
+.alert{border-radius:14px;padding:15px 20px;margin:20px 0;font-size:16px;border:1px solid var(--warn);background:var(--pOr);box-shadow:var(--shadow-sm);}
+.alert.ok{border-color:var(--vert);background:var(--pVert);}
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:16px;background:var(--panel);margin-top:8px;box-shadow:var(--shadow-sm);}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:640px;}
+th,td{text-align:left;padding:12px 15px;border-bottom:1px solid var(--rule);vertical-align:top;}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brun);font-weight:700;background:linear-gradient(180deg,#F1E5D2,#EADCC6);}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tbody tr{transition:background .15s;}
+tbody tr:hover{background:rgba(184,85,60,.05);}
+form .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;}
+form label{display:block;font-size:12px;font-weight:700;letter-spacing:.03em;color:var(--brun);text-transform:uppercase;margin-bottom:6px;}
+.full{grid-column:1/-1;}
+input,select,textarea{width:100%;font-family:var(--body);font-size:16px;color:var(--ink);background:#FFFDF9;border:1px solid var(--rule);border-radius:11px;padding:11px 13px;transition:border-color .18s,box-shadow .18s;}
+input:focus,select:focus,textarea:focus{border-color:var(--terra);box-shadow:0 0 0 3px rgba(184,85,60,.13);}
+textarea{min-height:66px;resize:vertical;line-height:1.5;}
+.hint{font-size:12px;color:var(--circ);font-weight:400;text-transform:none;letter-spacing:0;}
+.row5{display:flex;gap:8px;flex-wrap:wrap;}
+.row5 label{display:flex;align-items:center;gap:7px;font-weight:500;font-size:15px;text-transform:none;letter-spacing:0;color:var(--ink);border:1px solid var(--rule);padding:8px 14px;border-radius:10px;cursor:pointer;background:#FFFDF9;margin:0;transition:border-color .18s,background .18s;}
+.row5 label:hover{border-color:var(--terra);background:#FFF7EC;}
+.actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:26px;}
+button.primary{display:inline-block;cursor:pointer;border:none;background:linear-gradient(135deg,var(--rose),#7d414a);color:#F7EEDF;font-family:var(--body);font-weight:600;font-size:16px;padding:13px 28px;border-radius:11px;box-shadow:0 12px 24px -14px rgba(139,74,82,.8);transition:transform .18s,box-shadow .2s;}
+button.primary:hover{transform:translateY(-2px);box-shadow:0 18px 30px -16px rgba(139,74,82,.85);}
+.status{font-size:15px;min-height:22px;}
+.status.ok{color:var(--vert);font-weight:600;}.status.err{color:var(--crit);font-weight:600;}
+.empty{color:var(--brun);font-style:italic;padding:22px;}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--rule);font-size:13px;color:var(--circ);text-align:center;letter-spacing:.02em;}
+.gate{max-width:450px;margin:12vh auto 0;position:relative;overflow:hidden;background:linear-gradient(160deg,#FDF9F1,#F6ECD9);border:1px solid var(--rule);border-radius:20px;padding:38px 34px;box-shadow:var(--shadow);}
+.gate::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:linear-gradient(90deg,var(--rose),var(--terra),var(--or));}
+.gate h1{font-family:var(--display);font-size:32px;color:var(--rose);font-weight:600;margin:.1em 0;}
+@media (max-width:620px){form .grid{grid-template-columns:1fr;} .mast .he{font-size:44px;} .wrap{padding:22px 18px 64px;} .mast{padding:24px 22px;}}
+.insdel{width:30px;height:30px;border-radius:999px;border:1px solid var(--rule);background:#FFFDF9;color:var(--rose);font-size:18px;line-height:1;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+.insdel:hover{background:var(--crit);color:#fff;border-color:var(--crit);}
+</style>
+</head>
+<body>
+<div id="root" class="wrap"><p class="empty">Chargement...</p></div>
+<script>
+(function(){
+  "use strict";
+  var MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  var CODEK="capteur_code";
+  var state={eglises:[],entries:[],churches:[]};
+  var inscriptions=[];
+  var role="", myEglise="";
+  var tab="dash";
+  function getCode(){try{return sessionStorage.getItem(CODEK)||"";}catch(e){return "";}}
+  function setCode(c){try{sessionStorage.setItem(CODEK,c);}catch(e){}}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function moisLabel(m){if(!m)return"";var p=String(m).split("-");return (MOIS[(+p[1]-1)]||"")+" "+p[0];}
+  function nowMonth(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2);}
+  function months(){var s={};state.entries.forEach(function(e){if(e.mois)s[e.mois]=1;});return Object.keys(s).sort().reverse();}
+  function pillClass(n){n=+n;return n>=4?"c":(n==3?"w":"g");}
+  // La cible d'un groupe d'église : 6 sœurs EN PLUS de l'animatrice, soit 7 inscrites.
+  // Jamais une guillotine, un repère.
+  var CIBLE=7;
+  function inscrCountByChurch(){var by={};inscriptions.forEach(function(r){var k=(r.eglise||'').trim();if(k)by[k]=(by[k]||0)+1;});return by;}
+  function groupFlag(n){
+    n=+n||0;
+    if(n>=CIBLE) return {cls:"g",mot:"cible atteinte",note:"un groupe d'église peut tenir"};
+    if(n>=2)    return {cls:"w",mot:"en dessous de la cible",note:"le suivi à deux est possible dès maintenant"};
+    if(n===1)   return {cls:"w",mot:"une sœur seule",note:"à relier à un binôme ou à l'église voisine"};
+    return {cls:"n0",mot:"pas encore d'inscrite",note:""};
+  }
+  function avgBesoin(mois){var a=state.entries.filter(function(e){return e.mois===mois&&e.besoin;});if(!a.length)return null;return a.reduce(function(t,e){return t+(+e.besoin);},0)/a.length;}
+
+  async function api(path,opts){
+    opts=opts||{};opts.headers=Object.assign({"x-capteur-code":getCode()},opts.headers||{});
+    var r=await fetch(path,opts);
+    if(r.status===401){var e=new Error("unauthorized");e.code="unauthorized";throw e;}
+    if(!r.ok){var e2=new Error("http");e2.code="http";e2.status=r.status;throw e2;}
+    return r.json();
+  }
+
+  function summary(){
+    var ms=months();var cur=ms[0]||nowMonth();var prev=ms[1]||null;
+    var curE=state.entries.filter(function(e){return e.mois===cur;});
+    var churches={};curE.forEach(function(e){if(e.eglise)churches[e.eglise]=1;});
+    var pres=curE.reduce(function(t,e){return t+(+e.presentes||0);},0);
+    var nouv=curE.reduce(function(t,e){return t+(+e.nouvelles||0);},0);
+    var ab=avgBesoin(cur);var abp=prev?avgBesoin(prev):null;
+    var roster=(state.eglises||[]).filter(function(x){return x&&x.trim();});
+    var manquantes=roster.filter(function(x){return !churches[x];});
+    // Églises qui demandent à être regroupées : celles qui ont coché 4 ou 5 ce mois.
+    var regSet={};curE.forEach(function(e){if((+e.besoin)>=4&&e.eglise)regSet[e.eglise]=1;});
+    var regChurches=Object.keys(regSet).sort();
+    return {cur:cur,nbChurches:Object.keys(churches).length,rosterN:roster.length,pres:pres,nouv:nouv,ab:ab,abp:abp,manquantes:manquantes,curCount:curE.length,regChurches:regChurches};
+  }
+
+  function groupHealth(){
+    var by=inscrCountByChurch();
+    var names;
+    if(role==="church"){ names=[myEglise]; }
+    else {
+      var roster=(state.eglises||[]).filter(function(x){return x&&x.trim();});
+      var seen={};roster.forEach(function(x){seen[x]=1;});
+      Object.keys(by).forEach(function(k){if(!seen[k]){roster.push(k);seen[k]=1;}});
+      names=roster;
+    }
+    if(!names.length) return "";
+    names.sort(function(a,b){return (by[b]||0)-(by[a]||0);});
+    var h='<h2>'+(role==="church"?'Mon groupe':'Santé des groupes par église')+'</h2>'
+      +'<p class="lead">Repère fondé sur le nombre d\'inscrites, pas un verdict. Le vert dit qu\'un groupe d\'église peut tenir (cible : '+CIBLE+' sœurs + l\'animatrice) ; l\'ambre invite à commencer à deux et à relier, jamais à fermer.</p>';
+    h+='<div class="ghealth">';
+    names.forEach(function(k){
+      var n=by[k]||0;var f=groupFlag(n);
+      h+='<div class="grp '+f.cls+'"><div class="gn">'+esc(k)+' <span class="gc">&middot; '+n+'</span></div>'
+        +'<div class="flag"><span class="dot '+f.cls+'"></span><strong>'+esc(f.mot)+'</strong></div>'
+        +(f.note?'<div class="gv">'+esc(f.note)+'</div>':'')+'</div>';
+    });
+    h+='</div>';
+    h+='<p class="legend"><span><i style="background:var(--good)"></i> cible atteinte ('+CIBLE+'+)</span>'
+      +'<span><i style="background:var(--warn)"></i> en dessous — suivi à deux</span>'
+      +'<span><i style="background:var(--circ)"></i> aucune inscrite</span></p>';
+    return h;
+  }
+
+  function renderDash(){
+    var s=summary();
+    var h='<h2>Ce mois &middot; '+esc(moisLabel(s.cur))+'</h2><div class="cards">';
+    if(role==="admin"){
+      h+='<div class="card c1"><div class="k">Églises ayant remonté</div><div class="v">'+s.nbChurches+(s.rosterN?' <span class="det" style="font-size:22px">/ '+s.rosterN+'</span>':'')+'</div><div class="n">'+s.curCount+' fiche(s) reçue(s)</div></div>';
+    } else {
+      h+='<div class="card c1"><div class="k">Remontée ce mois</div><div class="v">'+(s.curCount?'Oui':'—')+'</div><div class="n">'+s.curCount+' fiche(s)</div></div>';
+    }
+    h+='<div class="card c2"><div class="k">Sœurs présentes</div><div class="v">'+s.pres+'</div></div>';
+    h+='<div class="card c3"><div class="k">Nouvelles venues</div><div class="v">'+s.nouv+'</div></div>';
+    if(role==="admin"){
+      var reg=s.regChurches||[];var repN=s.nbChurches;
+      var col=reg.length===0?'var(--good)':(reg.length>=3?'var(--crit)':'var(--warn)');
+      var regV=repN?(reg.length+' <span class="det" style="font-size:22px">/ '+repN+'</span>'):'&mdash;';
+      var regN=reg.length?(esc(reg.join(', '))+(reg.length>=3?' &middot; de quoi former un groupe de trois':'')):(repN?'<span class="det">aucune ne le demande ce mois</span>':'<span class="det">en attente des fiches</span>');
+      h+='<div class="card c4"><div class="k">Églises à regrouper</div><div class="v" style="color:'+col+'">'+regV+'</div><div class="n">'+regN+'</div></div></div>';
+    } else {
+      var mb=s.ab;
+      var mbTxt=mb==null?'&mdash;':('<span class="pill '+pillClass(Math.round(mb))+'">'+mb.toFixed(0)+'</span>');
+      h+='<div class="card c4"><div class="k">Mon besoin de regroupement</div><div class="v">'+mbTxt+'</div><div class="n"><span class="det">1 = non, 5 = urgent</span></div></div></div>';
+    }
+    if(role==="admin"&&s.rosterN){if(s.manquantes.length)h+='<div class="alert">Pas encore de remontée ce mois pour : <strong>'+s.manquantes.map(esc).join(', ')+'</strong>.</div>';else h+='<div class="alert ok">Les '+s.rosterN+' églises ont remonté ce mois.</div>';}
+    h+=groupHealth();
+    h+='<h2>'+(role==="admin"?'Toutes les remontées':'Mes remontées')+'</h2>';
+    if(!state.entries.length)return h+'<p class="empty">Aucune remontée pour l\'instant. Ouvre « Remplir une fiche ».</p>';
+    var rows=state.entries.slice().sort(function(a,b){return (+b.ts||0)-(+a.ts||0);});
+    h+='<div class="tablewrap"><table><thead><tr><th>Mois</th><th>Église</th><th>Cercle</th><th>Prés.</th><th>Nouv.</th><th>Besoin</th><th>En bref</th></tr></thead><tbody>';
+    rows.forEach(function(e){var brief=[];if(e.coince)brief.push('Coince : '+e.coince);if(e.aTenu)brief.push('A tenu : '+e.aTenu);
+      h+='<tr><td>'+esc(moisLabel(e.mois))+'</td><td>'+esc(e.eglise||'')+'</td><td class="num">'+esc(e.cercle||'')+'</td><td class="num">'+esc((e.presentes||0)+(e.envoyees?('/'+e.envoyees):''))+'</td><td class="num">'+esc(e.nouvelles||0)+'</td><td class="num">'+(e.besoin?('<span class="pill '+pillClass(e.besoin)+'">'+esc(e.besoin)+'</span>'):'&mdash;')+'</td><td class="det">'+esc(brief.join(' · ').slice(0,140))+'</td></tr>';});
+    return h+'</tbody></table></div>';
+  }
+
+  function opt(list){var o='<option value="">choisir...</option>';list.forEach(function(x){if(x&&x.trim())o+='<option>'+esc(x)+'</option>';});return o+'<option value="__autre">Autre (saisir)...</option>';}
+
+  function renderForm(){
+    var egField;
+    if(role==="church"){
+      egField='<input id="f_eglise" value="'+esc(myEglise)+'" readonly style="background:var(--panel2);color:var(--brun)">';
+    } else {
+      var roster=(state.eglises||[]).filter(function(x){return x&&x.trim();});
+      egField=roster.length?('<select id="f_eglise">'+opt(roster)+'</select><input id="f_eglise_autre" placeholder="nom de l\'église" hidden style="margin-top:8px">'):'<input id="f_eglise" placeholder="nom de l\'église">';
+    }
+    return '<h2>Remplir une fiche</h2><p class="lead">Cinq minutes suffisent. Ce n\'est pas un contrôle, c\'est un capteur.</p><form id="fiche"><div class="grid">'
+    +'<div><label>Église</label>'+egField+'</div>'
+    +'<div><label>Mois</label><input type="month" id="f_mois" value="'+nowMonth()+'"></div>'
+    +'<div><label>Cercle n&deg;</label><select id="f_cercle"><option value="1">1 &middot; Demeurer</option><option value="2">2 &middot; Se laisser tailler</option><option value="3">3 &middot; Porter du fruit</option><option value="4">4 &middot; Marcher à deux</option></select></div>'
+    +'<div><label>Sœurs présentes</label><div class="row5"><input type="number" min="0" id="f_pres" placeholder="présentes" style="max-width:120px"><span style="align-self:center;color:var(--brun)">sur</span><input type="number" min="0" id="f_env" placeholder="envoyées" style="max-width:120px"></div></div>'
+    +'<div><label>Nouvelles venues ce mois</label><input type="number" min="0" id="f_nouv" value="0"></div>'
+    +'<div><label>Accueillie en binôme&nbsp;?</label><div class="row5"><label><input type="radio" name="bin" value="oui"> oui</label><label><input type="radio" name="bin" value="non"> non</label><label><input type="radio" name="bin" value="" checked> s.o.</label></div></div>'
+    +'<div class="full"><label>Ce qui a tenu ce mois</label><textarea id="f_tenu"></textarea></div>'
+    +'<div class="full"><label>Ce qui coince</label><textarea id="f_coince"></textarea></div>'
+    +'<div class="full"><label>Une sœur à porter <span class="hint">sans détail confidentiel</span></label><textarea id="f_porter"></textarea></div>'
+    +'<div class="full"><label>Une sœur s\'est-elle sentie écoutée&nbsp;? <span class="hint">un exemple</span></label><textarea id="f_ecoutee"></textarea></div>'
+    +'<div class="full"><label>Revenir le mois prochain sur <span class="hint">boucler la boucle</span></label><textarea id="f_boucler"></textarea></div>'
+    +'<div><label>Besoin de regroupement <span class="hint">1 = pas du tout, 5 = urgent</span></label><div class="row5">'+[1,2,3,4,5].map(function(n){return '<label><input type="radio" name="bes" value="'+n+'"> '+n+'</label>';}).join('')+'</div></div>'
+    +'<div><label>En un mot, pourquoi</label><input id="f_pourquoi"></div>'
+    +'</div><div class="actions"><button type="submit" class="primary">Enregistrer la remontée</button><span class="status" id="fstatus"></span></div></form>';
+  }
+
+  function dt(ts){var d=new Date(+ts||0);if(!(+ts))return"";return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+
+  function renderInscr(){
+    var list=inscriptions.slice().sort(function(a,b){return (+b.ts||0)-(+a.ts||0);});
+    var sub=role==="church"?('Les femmes de <strong>'+esc(myEglise)+'</strong> qui ont laissé leur nom. À recontacter pour la date et le binôme.'):'Les femmes qui ont laissé leur nom sur la page publique, rangées par église.';
+    var h='<h2>Inscriptions au suivi</h2><p class="lead">'+sub+'</p>';
+    if(!list.length)return h+'<p class="empty">Aucune inscription pour l\'instant.</p>';
+    var by={};list.forEach(function(r){var k=(r.eglise||'(sans église)');(by[k]=by[k]||[]).push(r);});
+    var churches=Object.keys(by).sort();
+    h+='<div class="cards">';
+    churches.forEach(function(k,i){h+='<div class="card c'+((i%4)+1)+'"><div class="k">'+esc(k)+'</div><div class="v">'+by[k].length+'</div><div class="n">inscrite(s)</div></div>';});
+    h+='</div><h2>Toutes les inscriptions</h2><div class="tablewrap"><table><thead><tr><th>Reçue le</th><th>Église</th><th>Prénom</th><th>Nom</th><th>Téléphone</th><th>Email</th><th>Un mot</th><th></th></tr></thead><tbody>';
+    list.forEach(function(r){h+='<tr><td class="num">'+esc(dt(r.ts))+'</td><td>'+esc(r.eglise||'')+'</td><td>'+esc(r.prenom||'')+'</td><td>'+esc(r.nom||'')+'</td><td class="num">'+esc(r.telephone||'')+'</td><td>'+esc(r.email||'')+'</td><td class="det">'+esc((r.remarques||'').slice(0,140))+'</td><td><button class="insdel" data-id="'+esc(r.id||'')+'" title="Supprimer" aria-label="Supprimer">&times;</button></td></tr>';});
+    return h+'</tbody></table></div>';
+  }
+
+  function chRow(name,code){
+    return '<div class="chrow" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:10px;align-items:center">'
+      +'<input class="ch_name" placeholder="Nom de l\'église" value="'+esc(name||'')+'">'
+      +'<input class="ch_code" placeholder="Code de cette église" value="'+esc(code||'')+'">'
+      +'<button type="button" class="insdel chdel" title="Retirer">&times;</button></div>';
+  }
+  function renderReglages(){
+    var chs=state.churches||[];
+    var rows=chs.length?chs.map(function(c){return chRow(c.name,c.code);}).join(''):chRow('','');
+    return '<h2>Réglages &middot; églises &amp; codes</h2>'
+      +'<p class="lead">Ajoute ou modifie les églises du suivi. Chaque église a <strong>son propre code</strong> : sa responsable ne verra que ses inscriptions et ses remontées. Ton code d\'admin, lui, voit tout.<br><span class="hint" style="font-size:13px">Le nom doit être écrit exactement comme dans la liste déroulante de la page publique.</span></p>'
+      +'<form id="reg"><div id="chrows">'+rows+'</div>'
+      +'<div class="actions" style="margin-top:6px"><button type="button" id="chadd" class="primary" style="background:linear-gradient(135deg,var(--vert),#4f6147)">+ Ajouter une église</button></div>'
+      +'<div class="actions"><button type="submit" class="primary">Enregistrer les églises &amp; codes</button><span class="status" id="rstatus"></span></div></form>';
+  }
+
+  function docList(){
+    var anim=[
+      ["25_Manuel_de_l_animatrice.pdf","Le manuel de l'animatrice","Ce que tu as appris à la formation : posture, écoute, garde-fous. À relire."],
+      ["13_Guide_du_suivi_local.pdf","Le guide du suivi local","Ton mode d'emploi : rôle, rythme, déroulé, écoute."],
+      ["14_Les_quatre_cercles.pdf","Les quatre cercles","Les quatre rencontres mensuelles, prêtes à animer."],
+      ["15_Fiche_de_remontee.pdf","La fiche de remontée","À remplir après chaque cercle (ou dans « Remplir une fiche »)."],
+      ["17_Activites_pratiques.pdf","Les activités pratiques","La boîte à outils : exercices d'écoute à piocher."],
+      ["16_Auto_evaluation_Ou_j_en_suis.pdf","Où j'en suis","L'auto-évaluation, remplie au cercle 1 et au cercle 4."],
+      ["18_Tu_arrives_en_cours_de_route.pdf","Tu arrives en cours de route","À remettre à une sœur qui rejoint en chemin."],
+      ["23_Amener_une_amie.pdf","Amener une amie","Inviter une femme du dehors, en douceur."],
+      ["21_La_carte_de_la_responsable.pdf","La carte de la responsable","Ton aide-mémoire, une page."]
+    ];
+    var duo=[
+      ["24_Le_suivi_a_deux.pdf","Le suivi à deux","Quand votre église est petite : on démarre à deux. Le format allégé, adossé au cercle 4."]
+    ];
+    var adm=[
+      ["00_Sommaire_Hinneni3.pdf","Le sommaire du kit","Vue d'ensemble de toutes les pièces."],
+      ["19_Former_les_responsables.pdf","Former les responsables","Le conducteur de la journée de formation, pour toi."],
+      ["20_Le_cercle_des_responsables.pdf","Le cercle des responsables","Qui accompagne celles qui accompagnent."],
+      ["22_Les_traces_du_fruit.pdf","Les traces du fruit","Le registre du fruit, sans exposer personne."],
+      ["Hinneni_3_KIT_COMPLET.pdf","Le kit complet","Toutes les pièces réunies en un seul PDF."]
+    ];
+    return {anim:anim,duo:duo,adm:adm};
+  }
+  function docCard(x){
+    return '<button type="button" class="rescard" data-f="'+esc(x[0])+'" data-label="'+esc(x[1])+'">'
+      +'<span class="ricon">&#8681;</span><span class="rtxt"><span class="rt">'+esc(x[1])+'</span><span class="rd">'+esc(x[2])+'</span></span></button>';
+  }
+  function renderRessources(){
+    var d=docList();
+    var h='<h2>Ressources</h2><p class="lead">'+(role==="admin"
+      ?'Les documents du suivi. En haut, ceux des animatrices ; plus bas, ceux réservés au pasteur. Clique pour télécharger.'
+      :'Les documents dont tu as besoin pour animer ton suivi. Clique pour télécharger.')+'</p>';
+    h+='<h2 style="font-size:clamp(21px,2.6vw,26px)">Pour animer le suivi</h2>';
+    h+='<div class="reslist">'+d.anim.map(docCard).join('')+'</div>';
+    h+='<div class="duobox"><div class="duohead"><span class="duotag">Petite église</span><h3>Le suivi à deux</h3>'
+      +'<p>Si vous n\'êtes que deux, le suivi commence quand même. Cette fiche est en plus des quatre cercles et de la fiche de remontée ci-dessus — elle ne les remplace pas.</p></div>'
+      +'<div class="reslist">'+d.duo.map(docCard).join('')+'</div></div>';
+    if(role==="admin")h+='<h2>Pour le pasteur</h2><div class="reslist">'+d.adm.map(docCard).join('')+'</div>';
+    return h;
+  }
+
+  function render(){
+    var root=document.getElementById('root');
+    var body=tab==="dash"?renderDash():(tab==="form"?renderForm():(tab==="inscr"?renderInscr():(tab==="res"?renderRessources():renderReglages())));
+    var tabs='<button class="tab" data-t="dash" aria-selected="'+(tab==="dash")+'">Tableau de bord</button>'
+      +'<button class="tab" data-t="form" aria-selected="'+(tab==="form")+'">Remplir une fiche</button>'
+      +'<button class="tab" data-t="inscr" aria-selected="'+(tab==="inscr")+'">Inscriptions</button>'
+      +'<button class="tab" data-t="res" aria-selected="'+(tab==="res")+'">Ressources</button>'
+      +(role==="admin"?'<button class="tab" data-t="reg" aria-selected="'+(tab==="reg")+'">Réglages</button>':'');
+    var sub=role==="church"?('Église de '+esc(myEglise)):'Du Hinneni à l\'envoi';
+    root.innerHTML='<header class="mast"><span class="he">הִנֵּנִי</span><span class="eyebrow">FACSAR &middot; FEAR &middot; Océan Indien</span><h1>Le capteur du suivi</h1><div class="sub">'+sub+'</div></header>'
+      +'<nav class="tabs">'+tabs+'</nav>'
+      +'<section>'+body+'</section><p class="foot">Données enregistrées côté serveur, protégées par code. Rien n\'est public.</p>';
+    wire();
+  }
+
+  function fieldsToEntry(){
+    var egEl=document.getElementById('f_eglise');var eg=egEl?egEl.value:'';
+    if(eg==='__autre'){var a=document.getElementById('f_eglise_autre');eg=a?a.value:'';}
+    function v(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+    function rad(n){var e=document.querySelector('input[name="'+n+'"]:checked');return e?e.value:'';}
+    return {eglise:eg,mois:v('f_mois'),cercle:v('f_cercle'),presentes:v('f_pres'),envoyees:v('f_env'),nouvelles:v('f_nouv'),binome:rad('bin'),aTenu:v('f_tenu'),coince:v('f_coince'),aPorter:v('f_porter'),ecoutee:v('f_ecoutee'),boucler:v('f_boucler'),besoin:rad('bes'),pourquoi:v('f_pourquoi')};
+  }
+
+  function wireChDel(){document.querySelectorAll('.chdel').forEach(function(b){b.onclick=function(){var row=b.closest('.chrow');if(row)row.remove();};});}
+
+  function wire(){
+    document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){tab=b.getAttribute('data-t');render();});});
+    document.querySelectorAll('.insdel:not(.chdel)').forEach(function(b){b.addEventListener('click',async function(){var id=b.getAttribute('data-id');if(!id)return;if(!confirm('Supprimer définitivement cette inscription ?'))return;b.disabled=true;try{await api('/api/inscription/delete',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:id})});inscriptions=inscriptions.filter(function(x){return x.id!==id;});render();}catch(e){b.disabled=false;alert('Suppression impossible, réessaie.');}});});
+    document.querySelectorAll('.rescard').forEach(function(b){b.addEventListener('click',async function(){
+      var fn=b.getAttribute('data-f');var label=b.getAttribute('data-label');if(!fn)return;
+      var rt=b.querySelector('.rt');var old=rt?rt.textContent:'';if(rt)rt.textContent='Téléchargement...';b.disabled=true;
+      try{
+        var r=await fetch('/api/doc?f='+encodeURIComponent(fn),{headers:{'x-capteur-code':getCode()}});
+        if(!r.ok)throw new Error('http');
+        var blob=await r.blob();var u=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=u;a.download=(label||fn).replace(/[^0-9A-Za-zÀ-ſ ]/g,'').trim()+'.pdf';
+        document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);
+      }catch(e){alert('Téléchargement impossible, réessaie.');}
+      if(rt)rt.textContent=old;b.disabled=false;
+    });});
+    var f=document.getElementById('fiche');
+    if(f){
+      var egEl=document.getElementById('f_eglise');
+      if(egEl&&egEl.tagName==='SELECT')egEl.addEventListener('change',function(){var a=document.getElementById('f_eglise_autre');if(a)a.hidden=(egEl.value!=='__autre');});
+      f.addEventListener('submit',async function(ev){ev.preventDefault();var st=document.getElementById('fstatus');
+        var e=fieldsToEntry();if(!e.eglise){st.className="status err";st.textContent="Indique l\'église.";return;}
+        st.className="status";st.textContent="Enregistrement...";
+        try{var res=await api('/api/entry',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(e)});
+          state.entries=res.state.entries;state.eglises=res.state.eglises;st.className="status ok";st.textContent="Remontée enregistrée.";setTimeout(function(){tab="dash";render();},700);}
+        catch(err){st.className="status err";st.textContent=err.code==='unauthorized'?"Code refusé, recharge la page.":"Échec, réessaie.";}
+      });
+    }
+    var addB=document.getElementById('chadd');
+    if(addB)addB.addEventListener('click',function(){document.getElementById('chrows').insertAdjacentHTML('beforeend',chRow('',''));wireChDel();});
+    wireChDel();
+    var r=document.getElementById('reg');
+    if(r)r.addEventListener('submit',async function(ev){ev.preventDefault();var st=document.getElementById('rstatus');
+      var names=[].map.call(document.querySelectorAll('.ch_name'),function(x){return x.value.trim();});
+      var codes=[].map.call(document.querySelectorAll('.ch_code'),function(x){return x.value.trim();});
+      var arr=[];for(var i=0;i<names.length;i++){if(names[i])arr.push({name:names[i],code:codes[i]||''});}
+      var dup=arr.filter(function(c,i){return c.code&&arr.findIndex(function(o){return o.code===c.code;})!==i;});
+      if(dup.length){st.className="status err";st.textContent="Deux églises ont le même code — donne un code unique à chacune.";return;}
+      st.className="status";st.textContent="Enregistrement...";
+      try{var res=await api('/api/roster',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({churches:arr})});
+        state.churches=res.churches||arr;state.eglises=res.eglises||arr.map(function(c){return c.name;});st.className="status ok";st.textContent="Enregistré. Chaque responsable peut se connecter avec son code.";}
+      catch(err){st.className="status err";st.textContent=err.code==='unauthorized'?"Réservé à l'admin.":"Échec, réessaie.";}
+    });
+  }
+
+  function gate(msg){
+    var root=document.getElementById('root');
+    root.innerHTML='<div class="gate"><span class="eyebrow">FACSAR &middot; FEAR &middot; Océan Indien</span><h1>Le capteur du suivi</h1><p class="lead" style="margin:8px 0 18px">Espace réservé. Entre ton code d\'accès (admin, ou celui de ton église).</p><form id="g"><label style="text-transform:uppercase;font-size:12px;color:var(--brun);letter-spacing:.03em">Code d\'accès</label><input type="password" id="gcode" autocomplete="current-password" style="margin-top:6px"><div class="actions"><button type="submit" class="primary">Entrer</button><span class="status err" id="gstatus">'+(msg?esc(msg):'')+'</span></div></form></div>';
+    document.getElementById('g').addEventListener('submit',async function(ev){ev.preventDefault();setCode(document.getElementById('gcode').value.trim());await load();});
+  }
+
+  async function load(){
+    if(!getCode()){gate('');return;}
+    try{var res=await api('/api/state');role=res.role||"";myEglise=res.eglise||"";state={eglises:res.eglises||[],entries:res.entries||[],churches:res.churches||[]};
+      try{var ins=await api('/api/inscriptions');inscriptions=(ins&&ins.inscriptions)||[];}catch(e){inscriptions=[];}tab="dash";render();}
+    catch(err){if(err.code==='unauthorized'){try{sessionStorage.removeItem(CODEK);}catch(e){}gate('Code incorrect.');}
+      else{document.getElementById('root').innerHTML='<div class="gate"><h1>Service indisponible</h1><p class="lead">Réessaie dans un instant.</p></div>';}}
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
