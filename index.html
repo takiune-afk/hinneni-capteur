@@ -159,7 +159,7 @@ button.primary:hover{transform:translateY(-2px);box-shadow:0 18px 30px -16px rgb
   function pillClass(n){n=+n;return n>=4?"c":(n==3?"w":"g");}
   // La cible d'un groupe d'église : 6 sœurs EN PLUS de l'animatrice, soit 7 inscrites.
   // Jamais une guillotine, un repère.
-  var CIBLE=7;
+  var CIBLE=6;
   function inscrCountByChurch(){var by={};inscriptions.forEach(function(r){var k=(r.eglise||'').trim();if(k)by[k]=(by[k]||0)+1;});return by;}
   function groupFlag(n){
     n=+n||0;
