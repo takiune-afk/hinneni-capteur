@@ -1,10 +1,13 @@
 // Le capteur du suivi Hinneni — Cloudflare Pages, mode "_worker.js" (à plat).
 // Un seul fichier gère /api/* ; tout le reste sert les fichiers statiques (index.html).
 // Protections :
-//   - CAPTEUR_CODE  : code des responsables (lecture tableau de bord, remontées, inscriptions).
-//   - INGEST_TOKEN  : jeton secret de l'Apps Script, pour DÉPOSER une inscription.
+//   - CAPTEUR_CODE  : code administrateur (pasteur). Voit tout.
+//   - INGEST_TOKEN  : jeton pour DÉPOSER une inscription depuis la page publique.
+//   - TG_TOKEN      : (facultatif) jeton du bot Telegram. S'il est absent, aucune alerte n'est envoyée
+//                     et tout le reste fonctionne comme avant. Créé gratuitement via @BotFather.
+//   - TG_SECRET     : (facultatif) secret du webhook Telegram (setWebhook ...&secret_token=...).
 // Stockage KV (binding CAPTEUR_KV). Un enregistrement = une clé :
-//   roster / entry:<id> / inscr:<id>
+//   churches / entry:<id> / inscr:<id> / tgchat:<église> / tgpasteur
 
 const INSCR_FIELDS = ["prenom", "nom", "eglise", "telephone", "email", "remarques"];
 
@@ -50,6 +53,27 @@ function getCookie(request, name) {
 }
 function newId() { return Date.now() + "-" + Math.random().toString(36).slice(2, 7); }
 
+// --- Téléphone : clé de dédoublonnage (9 derniers chiffres, ignore espaces/points/+262) ---
+function digits(s) { return String(s == null ? "" : s).replace(/\D+/g, ""); }
+function phoneKey(s) { return digits(s).slice(-9); }
+
+// --- Envoi Telegram (gratuit). N'échoue jamais l'inscription : tout est try/catch + timeout. ---
+async function tgSend(env, chatId, text) {
+  if (!env.TG_TOKEN || !chatId) return false;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch("https://api.telegram.org/bot" + env.TG_TOKEN + "/sendMessage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: text, disable_web_page_preview: true }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    return r.ok;
+  } catch (e) { return false; }
+}
+
 async function listByPrefix(kv, prefix) {
   const out = [];
   let cursor;
@@ -85,7 +109,66 @@ async function handleApi(request, env) {
     const rec = {};
     for (const f of INSCR_FIELDS) rec[f] = clean(body[f]);
     rec.id = newId(); rec.ts = String(Date.now());
+
+    // Dédoublonnage : même église + même téléphone (ou, faute de tel, même prénom+nom).
+    // Un double clic ou un rafraîchissement ne crée plus une seconde inscription ni une seconde alerte.
+    const existing = (await listByPrefix(kv, "inscr:")).filter((x) => x.eglise === rec.eglise);
+    const pk = phoneKey(rec.telephone);
+    const nameKey = (clean(rec.prenom) + "|" + clean(rec.nom)).toLowerCase().trim();
+    const isDup = existing.some((x) => {
+      if (pk && pk.length >= 6) return phoneKey(x.telephone) === pk;
+      return nameKey !== "|" && (clean(x.prenom) + "|" + clean(x.nom)).toLowerCase().trim() === nameKey;
+    });
+    if (isDup) return json({ ok: true, duplicate: true });
+
     await kv.put("inscr:" + rec.id, JSON.stringify(rec));
+
+    // Notification Telegram privée à la responsable de l'église. Si l'église n'est pas liée
+    // (ou « Autre »), repli sur le pasteur pour qu'il relaie. L'envoi ne bloque jamais la réponse.
+    let chatId = await kv.get("tgchat:" + rec.eglise);
+    let head = "🕊️ Nouvelle inscription au suivi";
+    if (!chatId) {
+      chatId = await kv.get("tgpasteur");
+      head = "⚠️ Inscription à relayer — église « " + (rec.eglise || "?") + " » non liée";
+    }
+    if (chatId) {
+      const lines = [head, "", "Église : " + (rec.eglise || "—"), (clean(rec.prenom) + " " + clean(rec.nom)).trim()];
+      if (clean(rec.telephone)) lines.push("📞 " + rec.telephone);
+      if (clean(rec.email)) lines.push("✉️ " + rec.email);
+      if (clean(rec.remarques)) lines.push("« " + rec.remarques + " »");
+      lines.push("", "Recontacte-la : donne-lui la date, mets-la en binôme. Elle ne repart pas seule.");
+      await tgSend(env, chatId, lines.join("\n"));
+    }
+    return json({ ok: true });
+  }
+
+  // PORTE TELEGRAM : webhook appelé par Telegram. Une responsable envoie le CODE de son église
+  // au bot → on mémorise son chat_id pour lui pousser les inscriptions. Le pasteur lie via le code admin.
+  if (method === "POST" && path.endsWith("/tg")) {
+    if (!env.TG_TOKEN) return json({ ok: true });
+    if (env.TG_SECRET && (request.headers.get("x-telegram-bot-api-secret-token") || "") !== env.TG_SECRET) return json({ ok: true });
+    let upd;
+    try { upd = await request.json(); } catch { return json({ ok: true }); }
+    const msg = upd && (upd.message || upd.edited_message);
+    const chatId = msg && msg.chat && msg.chat.id;
+    const text = clean(msg && msg.text).trim();
+    if (chatId && text) {
+      if (text === "/start") {
+        await tgSend(env, chatId, "Bienvenue 🌿\nEnvoie-moi le code de ton église pour recevoir ici chaque inscription de tes sœurs.\n(Le pasteur envoie son code administrateur.)");
+      } else if (env.CAPTEUR_CODE && text === env.CAPTEUR_CODE) {
+        await kv.put("tgpasteur", String(chatId));
+        await tgSend(env, chatId, "✅ Lié comme pasteur. Tu recevras en secours les inscriptions des églises non liées.");
+      } else {
+        const churches = (await kv.get("churches", "json")) || [];
+        const found = churches.find((c) => c && c.code && c.code === text);
+        if (found) {
+          await kv.put("tgchat:" + found.name, String(chatId));
+          await tgSend(env, chatId, "✅ C'est lié : « " + found.name + " ».\nTu recevras ici chaque nouvelle inscription pour ton église.");
+        } else {
+          await tgSend(env, chatId, "Code non reconnu. Envoie le code exact de ton église — le même que pour le tableau de bord.");
+        }
+      }
+    }
     return json({ ok: true });
   }
 
