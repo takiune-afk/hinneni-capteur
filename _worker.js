@@ -11,6 +11,10 @@
 
 const INSCR_FIELDS = ["prenom", "nom", "eglise", "telephone", "email", "remarques"];
 
+// Cible de santé d'un groupe : 6 sœurs inscrites (l'animatrice en plus, elle ne s'inscrit pas).
+// Doit rester égale à CIBLE dans index.html, pour que le message « au complet » tombe quand le voyant passe au vert.
+const CIBLE = 6;
+
 // Documents servis dans l'onglet « Ressources », gardés par le code.
 // Fichiers déposés dans public/docs/. Accès direct à /docs/* bloqué : tout passe par /api/doc.
 const DOCS_RESP = [
@@ -138,6 +142,20 @@ async function handleApi(request, env) {
       if (clean(rec.remarques)) lines.push("« " + rec.remarques + " »");
       lines.push("", "Recontacte-la : donne-lui la date, mets-la en binôme. Elle ne repart pas seule.");
       await tgSend(env, chatId, lines.join("\n"));
+    }
+
+    // Message « au complet » : une seule fois, quand l'église atteint tout juste la cible (6 sœurs inscrites).
+    // On compte l'inscription qu'on vient d'ajouter ; on ne renvoie rien au-delà de la cible.
+    const total = existing.length + 1;
+    if (total === CIBLE && chatId) {
+      await tgSend(env, chatId, [
+        "🎉 Ton groupe est au complet",
+        "",
+        "Église : " + (rec.eglise || "—"),
+        "La cible est atteinte : " + CIBLE + " sœurs inscrites (l'animatrice en plus).",
+        "",
+        "Tu peux lancer quand tu le sens : fixe la date, le lieu, l'heure. C'est une invitation, pas une obligation.",
+      ].join("\n"));
     }
     return json({ ok: true });
   }
